@@ -100,6 +100,11 @@ else
   echo "WARN: systemctl not found in rootfs, skipping enabling of resize-rootfs.service"
 fi
 
+# Expand the partition to use the entire disk space
+log "Expanding rootfs partition and resizing filesystem"
+sudo parted /dev/mmcblk0 resizepart 2 100%    # Expand rootfs partition to the maximum size
+sudo resize2fs /dev/mmcblk0p2                 # Resize the ext4 filesystem to use all the space
+
 # Clean up
 sudo umount /mnt/src
 sudo losetup -d "$BASE_LOOP"
