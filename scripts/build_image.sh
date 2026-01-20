@@ -45,9 +45,40 @@ sudo cp $BOOT_SRC/extlinux.conf /mnt/boot/
 sudo cp $BOOT_SRC/fnEnv.txt /mnt/boot/
 sudo cp $BOOT_SRC/*.dtb /mnt/boot/
 
+
+
 log "Copy rootfs"
-BASE_LOOP=$(sudo losetup --find --show $BASE_IMG)
-sudo mount ${BASE_LOOP}p2 /mnt/src
+
+BASE_LOOP=$(sudo losetup --find --show --partscan "$BASE_IMG")
+sudo partprobe "$BASE_LOOP" || true
+
+# 等待分区节点出现（最多等 3 秒）
+for i in 1 2 3; do
+  ls "${BASE_LOOP}"p* >/dev/null 2>&1 && break
+  sleep 1
+done
+
+# 自动找 ext4 分区作为 rootfs（优先第一个 ext4）
+SRC_PART=""
+for p in "${BASE_LOOP}"p*; do
+  if sudo blkid -o value -s TYPE "$p" 2>/dev/null | grep -qx "ext4"; then
+    SRC_PART="$p"
+    break
+  fi
+done
+
+# 如果没找到 ext4，退化为直接挂载整个镜像（极少数单分区无分区表）
+if [ -z "$SRC_PART" ]; then
+  SRC_PART="$BASE_LOOP"
+fi
+
+sudo mount "$SRC_PART" /mnt/src
+sudo cp -a /mnt/src/* /mnt/root/
+sudo umount /mnt/src
+sudo losetup -d "$BASE_LOOP"
+
+
+
 sudo cp -a /mnt/src/* /mnt/root/
 sudo umount /mnt/src
 sudo losetup -d $BASE_LOOP
