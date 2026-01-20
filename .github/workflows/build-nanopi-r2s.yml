@@ -2,7 +2,11 @@ name: Build FnNAS NanoPi-R2S
 
 on:
   workflow_dispatch:
-
+    inputs:
+      rootfs_size:
+        description: "系统分区大小（GiB）"
+        required: false
+        default: "8"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,8 +24,12 @@ jobs:
       - name: Download FnNAS
         run: bash scripts/download_fnnas.sh
 
+    
       - name: Build image
         run: bash scripts/build_image.sh
+        env:
+          ROOTFS_SIZE: ${{ github.event.inputs.rootfs_size }}
+        
 
       - name: Compress
         run: xz -9 fnnas-nanopi-r2s.img
