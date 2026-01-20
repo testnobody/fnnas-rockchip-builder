@@ -1,0 +1,33 @@
+name: Build FnNAS NanoPi-R2S
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq xz-utils parted dosfstools e2fsprogs
+
+      - name: Download FnNAS
+        run: bash scripts/download_fnnas.sh
+
+      - name: Build image
+        run: bash scripts/build_image.sh
+
+      - name: Compress
+        run: xz -9 fnnas-nanopi-r2s.img
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: fnnas-nanopi-r2s-${{ github.run_number }}
+          files: fnnas-nanopi-r2s.img.xz
