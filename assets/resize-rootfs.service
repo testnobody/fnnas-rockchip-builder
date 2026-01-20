@@ -1,0 +1,10 @@
+[Unit]
+Description=Resize root filesystem on first boot
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/resize-rootfs.sh
+
+[Install]
+WantedBy=multi-user.target
