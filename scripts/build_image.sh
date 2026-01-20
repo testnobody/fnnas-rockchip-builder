@@ -93,7 +93,12 @@ sudo install -m 0755 assets/resize-rootfs.sh /mnt/root/usr/local/sbin/resize-roo
 sudo install -m 0644 assets/resize-rootfs.service /mnt/root/etc/systemd/system/resize-rootfs.service
 
 # Enable the resize-rootfs service to run on first boot
-sudo chroot /mnt/root /bin/sh -lc "systemctl enable resize-rootfs.service || true"
+# Check if systemctl exists before enabling
+if [ -x /mnt/root/bin/systemctl ] || [ -x /mnt/root/usr/bin/systemctl ]; then
+  sudo chroot /mnt/root /bin/sh -lc "systemctl enable resize-rootfs.service || true"
+else
+  echo "WARN: systemctl not found in rootfs, skipping enabling of resize-rootfs.service"
+fi
 
 # Clean up
 sudo umount /mnt/src
