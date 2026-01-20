@@ -29,6 +29,8 @@ ROOT=${LOOP}p2
 sudo mkfs.vfat $BOOT
 sudo mkfs.ext4 $ROOT
 
+sudo mkdir -p /mnt/boot /mnt/root /mnt/src
+
 sudo mount $BOOT /mnt/boot
 sudo mount $ROOT /mnt/root
 
