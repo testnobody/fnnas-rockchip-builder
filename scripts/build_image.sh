@@ -35,8 +35,10 @@ ROOT=${LOOP}p2
 sudo mkfs.vfat $BOOT
 sudo mkfs.ext4 $ROOT
 
+# Create mount points
 sudo mkdir -p /mnt/boot /mnt/root /mnt/src
 
+# Mount the partitions
 sudo mount $BOOT /mnt/boot
 sudo mount $ROOT /mnt/root
 
@@ -45,32 +47,19 @@ sudo cp $BOOT_SRC/extlinux.conf /mnt/boot/
 sudo cp $BOOT_SRC/fnEnv.txt /mnt/boot/
 sudo cp $BOOT_SRC/*.dtb /mnt/boot/
 
-
-
 log "Copy rootfs"
 
+# Attach base image and mount it
 BASE_LOOP=$(sudo losetup --find --show --partscan "$BASE_IMG")
 sudo partprobe "$BASE_LOOP" || true
 
-# 等待分区节点出现（最多等 3 秒）
-for i in 1 2 3; do
-  ls "${BASE_LOOP}"p* >/dev/null 2>&1 && break
-  sleep 1
-done
-
-
-log "Copy rootfs"
-
-BASE_LOOP=$(sudo losetup --find --show --partscan "$BASE_IMG")
-sudo partprobe "$BASE_LOOP" || true
-
-# 等待分区节点出现
+# Wait for partitions to appear (max 3 seconds)
 for i in 1 2 3 4 5; do
   ls "${BASE_LOOP}"p* >/dev/null 2>&1 && break
   sleep 1
 done
 
-# 选“最大的 ext4 分区”作为 rootfs（最稳）
+# Select the largest ext4 partition for rootfs
 SRC_PART=""
 SRC_SIZE=0
 for p in "${BASE_LOOP}"p*; do
@@ -84,20 +73,27 @@ for p in "${BASE_LOOP}"p*; do
   fi
 done
 
-# 如果没找到 ext4，尝试直接挂载整个镜像（少见：无分区表）
+# If no ext4 partition found, fall back to the entire image
 if [ -z "$SRC_PART" ]; then
   SRC_PART="$BASE_LOOP"
 fi
 
+# Mount rootfs partition
 sudo mount "$SRC_PART" /mnt/src
 
-# ✅ 用 /mnt/src/. 复制，避免空目录导致 * 报错
+# Use /mnt/src/. to copy contents and avoid empty directory error
 sudo cp -a /mnt/src/. /mnt/root/
 
+# Install resize-rootfs.sh and systemd service
+sudo install -m 0755 assets/resize-rootfs.sh /mnt/root/usr/local/sbin/resize-rootfs.sh
+sudo install -m 0644 assets/resize-rootfs.service /mnt/root/etc/systemd/system/resize-rootfs.service
+
+# Enable the resize-rootfs service to run on first boot
+sudo chroot /mnt/root /bin/sh -lc "systemctl enable resize-rootfs.service || true"
+
+# Clean up
 sudo umount /mnt/src
 sudo losetup -d "$BASE_LOOP"
-
-
 
 sync
 sudo umount /mnt/boot
