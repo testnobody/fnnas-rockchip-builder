@@ -84,6 +84,10 @@ sudo mount "$SRC_PART" /mnt/src
 # Use /mnt/src/. to copy contents and avoid empty directory error
 sudo cp -a /mnt/src/. /mnt/root/
 
+# Ensure the target directory exists
+sudo mkdir -p /mnt/root/usr/local/sbin
+sudo mkdir -p /mnt/root/etc/systemd/system
+
 # Install resize-rootfs.sh and systemd service
 sudo install -m 0755 assets/resize-rootfs.sh /mnt/root/usr/local/sbin/resize-rootfs.sh
 sudo install -m 0644 assets/resize-rootfs.service /mnt/root/etc/systemd/system/resize-rootfs.service
