@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# rootfs size in GiB (from workflow input)
+ROOTFS_SIZE_GB=${ROOTFS_SIZE:-8}
+
+# calculate total image size
+IMAGE_SIZE="${ROOTFS_SIZE_GB}G"
+
 set -e
 source scripts/common.sh
 source configs/nanopi-r2s.conf
