@@ -58,30 +58,46 @@ for i in 1 2 3; do
   sleep 1
 done
 
-# 自动找 ext4 分区作为 rootfs（优先第一个 ext4）
+
+log "Copy rootfs"
+
+BASE_LOOP=$(sudo losetup --find --show --partscan "$BASE_IMG")
+sudo partprobe "$BASE_LOOP" || true
+
+# 等待分区节点出现
+for i in 1 2 3 4 5; do
+  ls "${BASE_LOOP}"p* >/dev/null 2>&1 && break
+  sleep 1
+done
+
+# 选“最大的 ext4 分区”作为 rootfs（最稳）
 SRC_PART=""
+SRC_SIZE=0
 for p in "${BASE_LOOP}"p*; do
-  if sudo blkid -o value -s TYPE "$p" 2>/dev/null | grep -qx "ext4"; then
-    SRC_PART="$p"
-    break
+  fstype=$(sudo blkid -o value -s TYPE "$p" 2>/dev/null || true)
+  if [ "$fstype" = "ext4" ]; then
+    sz=$(sudo blockdev --getsize64 "$p" 2>/dev/null || echo 0)
+    if [ "$sz" -gt "$SRC_SIZE" ]; then
+      SRC_SIZE="$sz"
+      SRC_PART="$p"
+    fi
   fi
 done
 
-# 如果没找到 ext4，退化为直接挂载整个镜像（极少数单分区无分区表）
+# 如果没找到 ext4，尝试直接挂载整个镜像（少见：无分区表）
 if [ -z "$SRC_PART" ]; then
   SRC_PART="$BASE_LOOP"
 fi
 
 sudo mount "$SRC_PART" /mnt/src
-sudo cp -a /mnt/src/* /mnt/root/
+
+# ✅ 用 /mnt/src/. 复制，避免空目录导致 * 报错
+sudo cp -a /mnt/src/. /mnt/root/
+
 sudo umount /mnt/src
 sudo losetup -d "$BASE_LOOP"
 
 
-
-sudo cp -a /mnt/src/* /mnt/root/
-sudo umount /mnt/src
-sudo losetup -d $BASE_LOOP
 
 sync
 sudo umount /mnt/boot
